@@ -46,11 +46,20 @@ class McrollArea(QScrollArea):
                     # will_weight.out_path = save_dir + "/" + os.path.basename(will_weight.image_path)
                     # print(will_weight.out_path)
                     # cls_label = will_weight.out_path.split('/')[-2]
-                    # print(will_weight.image_path)
+                    '''
+                    单个按钮的操作
+                    # cls_label = self.mainUI.get_class()
                     # print(cls_label)
-                    cls_label = self.mainUI.get_class()
+                    '''
+                    cls_name = self.mainUI.cls_name
+                    cls_name_index = self.mainUI.cls_name_index
+                    print(cls_name)
+                    print(cls_name_index)
                     df.loc[i] = [os.path.relpath(will_weight.image_path), 0, 0, 0, 0, 0]
-                    df.loc[(df.image == os.path.relpath(will_weight.image_path)), cls_label] = 1
+                    if cls_name_index == 1:
+                        df.loc[(df.image == os.path.relpath(will_weight.image_path)), cls_name] = 1
+                    # elif cls_name_index == 2:
+                    #     df.loc[(df.image == os.path.relpath(will_weight.image_path)), cls_name] = 0
                     df.drop_duplicates(subset=['image'] ,keep='first', inplace=True)
                     # will_weight.image_path=will_weight.out_path
                     will_weight.deleteLater()
@@ -70,16 +79,21 @@ class McrollArea(QScrollArea):
                     self.mainUI.key_label.setText("key:none   ")
             self.mainUI.will_changes.clear()
 
-
         ##负样本功能###
+
         if self.mainUI.negative_flag and len(self.mainUI.will_changes) > 0:
             for will_weight in self.mainUI.will_changes:
-                # save_dir=self.mainUI.get_save_dir()
-                # will_weight.out_path = save_dir + "/" + os.path.basename(will_weight.image_path)
-                # print(will_weight.out_path)
-                # cls_label = will_weight.out_path.split('/')[-2]
+                '''单个按钮的操作
                 cls_label = self.mainUI.get_class()
                 df.loc[(df.image == os.path.relpath(will_weight.image_path)), cls_label] = 0
+                '''
+                cls_temp_name = self.mainUI.temp_cls_name
+                df.loc[(df.image == os.path.relpath(will_weight.image_path)), cls_temp_name] = 0
+                cls_name = self.mainUI.cls_name
+                cls_name_index = self.mainUI.cls_name_index
+                if cls_name_index == 1:
+                    df.loc[(df.image == os.path.relpath(will_weight.image_path)), cls_name] = 1
+                df.drop_duplicates(subset=['image'] ,keep='first', inplace=True)
                 will_weight.deleteLater()
                 self.mainUI.negative_flag = False
             self.mainUI.will_changes.clear()
@@ -107,7 +121,13 @@ class Img_viewed(QMainWindow):
         self.config_file_path = 'label_config.ini'
         self.jimi_config.read(self.config_file_path)
         self.cls_1= self.jimi_config.get("cls", "1").split(",")  ## return list of classes
-        self.cls_2= self.jimi_config.get("cls", "2").split(",")
+        # self.cls_2= self.jimi_config.get("cls", "2").split("/")
+        self.clscollection = self.jimi_config.get('cls', '2').split('/')
+
+        self.cls_name = None
+        self.cls_name_index = 0
+
+
         self.save_dir= self.jimi_config.get("cls", "save_dir")   ## return str of saving dir
         self.pic_width= self.jimi_config.getint("default", "pic_width")
         if len(self.cls_1)==0:
@@ -156,11 +176,17 @@ class Img_viewed(QMainWindow):
         self.del_file_pushbutton.setText('delete')
         self.del_file_pushbutton.clicked.connect(self.delete)
 
-        self.cb = QComboBox(self)
-        self.cb.setGeometry(1000,10,100,30)
-        # self.cb.addItem("C")                                       # 添加一个项目
-        self.cb.addItems(["blur", "nonblur"])                 # 添加多个项目
-        self.cb.currentIndexChanged.connect(self.changeIndex)  # 发射currentIndexChanged信号，连接下面的selectionchange槽
+
+        for index, item in enumerate(self.clscollection):
+            cls_list = item.split(',')
+            self.cb = QComboBox(self)
+            self.cb.setGeometry(1000 + index*120,10,100,30)
+            self.cb.setObjectName('cb_'+str(index))
+            self.cb.addItem('choose '+str(cls_list[0]))
+            self.cb.addItems([cls_list[0], cls_list[1]])                 # 添加多个项目
+            self.cb.setCurrentIndex(0)  
+            self.cb.currentIndexChanged.connect(self.changeIndex)  # 发射currentIndexChanged信号，连接下面的selectionchange槽
+        
 
         # self.label_cls1 = QLabel(self)
         # self.label_cls1.setText("☆二级:")
@@ -178,14 +204,14 @@ class Img_viewed(QMainWindow):
         self.change_mode_pushbutton.setText('点切标注模式')
         self.change_mode_pushbutton.clicked.connect(self.start_img_viewer)
 
-        self.positive_pushbutton = QPushButton(self)
-        self.positive_pushbutton.setGeometry(150 + 150 +80+ (len(self.cls_1)) * 100, 10, 50, 30)
-        self.positive_pushbutton.setObjectName('positive')
-        self.positive_pushbutton.setText('正样本')
-        self.positive_pushbutton.clicked.connect(self.select_positve)
+        # self.positive_pushbutton = QPushButton(self)
+        # self.positive_pushbutton.setGeometry(150 + 150 +80+ (len(self.cls_1)) * 100, 10, 50, 30)
+        # self.positive_pushbutton.setObjectName('positive')
+        # self.positive_pushbutton.setText('正样本')
+        # self.positive_pushbutton.clicked.connect(self.select_positve)
 
         self.negative_pushbutton = QPushButton(self)
-        self.negative_pushbutton.setGeometry(150 + 150 +80+ (len(self.cls_1)) * 110, 10, 50, 30)
+        self.negative_pushbutton.setGeometry(150 + 150 +80+ 500, 10, 50, 30)
         self.negative_pushbutton.setObjectName('negative')
         self.negative_pushbutton.setText('负样本')
         self.negative_pushbutton.clicked.connect(self.select_negative)
@@ -215,6 +241,7 @@ class Img_viewed(QMainWindow):
         self.key_control=False
         self.key_del=False
         self.negative_flag=False
+        self.temp_cls_name = None
         
 
         self.grid_index_last=-1
@@ -294,7 +321,7 @@ class Img_viewed(QMainWindow):
         self.cls_level = source.objectName().split("_")[0]
         if self.cls_level == "cls1":
             cls_index_1 = int(source.objectName().split("_")[1])
-            print(cls_index_1)
+            # print(cls_index_1)
             self.cls_index_1 = cls_index_1
             source.setStyleSheet(f"border:2px solid rgb{colors[cls_index_1]};")
         # else:
@@ -306,7 +333,7 @@ class Img_viewed(QMainWindow):
             last_Button.setStyleSheet("")
             # last_Button.setStyleSheet(f"border:1px solid rgb(255, 255, 255);")
         self.last_cls = source.objectName()
-        print(self.last_cls)
+        # print(self.last_cls)
 
     ##移动图片到del下
     def delete(self):
@@ -327,12 +354,19 @@ class Img_viewed(QMainWindow):
             self.start_img_viewer()
     
     def changeIndex(self):
-        pass
+        source = self.sender()
+        cb_index = int(source.objectName().split("_")[1])
+        index = source.currentIndex()
+        name = source.itemText(index)
+        self.cls_name = name
+        self.cls_name_index = index
+        source.setStyleSheet(f"border:2px solid rgb{colors[cb_index]};")
 
 
-    ##筛选正样本
-    def select_positve(self):
-        pass
+    # ##筛选正样本
+    # def select_positve(self):
+    #     pass
+
     
 
     ##筛选负样本
@@ -398,9 +432,9 @@ class Img_viewed(QMainWindow):
         
         elif self.edit_mode == 1:
             
-            if self.cls_index_1 < 0:
-                QMessageBox.warning(self, '错误', '请先选择分类')
-                return
+            # if self.cls_index_1 < 0:
+            #     QMessageBox.warning(self, '错误', '请先选择分类')
+            #     return
            
             self.key_shift = False
             self.key_control = False
@@ -422,10 +456,19 @@ class Img_viewed(QMainWindow):
             # self.img_files = ['%s/%s' % (i[0], j) for i in g for j in i[-1] if
             #                   j.endswith('jpg') or j.endswith('png') or j.endswith('jpeg')]
             
-            cls_label = self.get_class()
             df = pd.read_csv('classes.csv')
-            df_cls = df[df[cls_label] > 0]
+            ''' 
+            单按钮操作 
+            # cls_label = self.get_class()
+            # df_cls = df[df[cls_label] > 0]
+            # self.img_files = df_cls['image'].values.tolist()
+            '''
+
+            self.temp_cls_name = self.cls_name
+            df_cls = df[df[self.temp_cls_name] > 0]
             self.img_files = df_cls['image'].values.tolist()
+            
+            
 
             self.img_total = len(self.img_files)
             
@@ -512,6 +555,7 @@ class Img_viewed(QMainWindow):
             cls_label = self.cls_1[self.cls_index_1]
             # os.makedirs(self.save_dir + "/" + dir_cls, exist_ok=True)
             return cls_label
+        
 
         # else:
         #     dir_cls = ""
@@ -595,9 +639,9 @@ class QClickableImage(QWidget):
             # self.setWindowFlags(Qt.FramelessWindowHint)
             self.rightClicked.emit(self.image_path)
         else:
-            if self.mainUI.cls_index_1 <0:
-                QMessageBox.warning(self, '错误', '请先选择分类')
-                return
+            # if self.mainUI.cls_index_1 <0:
+            #     QMessageBox.warning(self, '错误', '请先选择分类')
+            #     return
             if self.image_path is None:
                 return
             palettel = QtGui.QPalette()
